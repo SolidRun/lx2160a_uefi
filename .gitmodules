@@ -1,0 +1,28 @@
+[submodule "build/arm-trusted-firmware"]
+	path = build/arm-trusted-firmware
+	url = https://github.com/SolidRun/arm-trusted-firmware.git
+	branch = LX2160_UEFI_ACPI_EAR3-sr
+[submodule "build/ddr-phy-binary"]
+	path = build/ddr-phy-binary
+	url = https://github.com/NXP/ddr-phy-binary.git
+	branch = master
+[submodule "build/rcw"]
+	path = build/rcw
+	url = https://github.com/SolidRun/rcw.git
+	branch = LSDK-20.04-sr
+[submodule "build/optee_os"]
+	path = build/optee_os
+	url = https://github.com/SolidRun/optee_os.git
+	branch = LX2160_UEFI_ACPI_EAR3-sr
+[submodule "build/tianocore/edk2"]
+	path = build/tianocore/edk2
+	url = https://github.com/SolidRun/edk2.git
+	branch = mainline-sr
+[submodule "build/tianocore/edk2-platforms"]
+	path = build/tianocore/edk2-platforms
+	url = https://github.com/SolidRun/edk2-platforms.git
+	branch = LX2160_UEFI_ACPI_EAR3-lx2160cex7
+[submodule "build/tianocore/edk2-non-osi"]
+	path = build/tianocore/edk2-non-osi
+	url = https://github.com/SolidRun/edk2-non-osi.git
+	branch = master-sr
