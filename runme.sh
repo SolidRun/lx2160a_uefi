@@ -180,9 +180,9 @@ fi
 truncate -s 8M $ROOTDIR/images/${IMG}
 
 # RCW+PBI+BL2 at block 8
-if [ "x$BOOT_MODE" == "flexspi_nor" ]; then
+if [ "$BOOT_MODE" == "flexspi_nor" ]; then
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_flexspi_nor.pbl of=images/${IMG} bs=512 conv=notrunc
-elif [ "x$BOOT_MODE" == "sd" ]; then
+elif [ "$BOOT_MODE" == "sd" ]; then
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_sd.pbl of=images/${IMG} bs=512 seek=8 conv=sparse
 else
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 conv=notrunc
