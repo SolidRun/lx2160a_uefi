@@ -39,7 +39,7 @@ ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=${SOC_SPEED}_${BUS_SPEED}_${DDR_SPEED}
 
-TOOLS="wget tar git make dd envsubst"
+TOOLS="wget tar git make dd envsubst dtc iasl python3"
 
 HOST_ARCH=`arch`
 if [ "$HOST_ARCH" == "x86_64" ]; then 
@@ -139,7 +139,7 @@ export ARCH=arm
 export GCC5_AARCH64_PREFIX=$CROSS_COMPILE
 export WORKSPACE=$ROOTDIR/build/tianocore
 export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-platforms:$WORKSPACE/edk2-non-osi
-source  edk2/edksetup.sh
+PYTHON_COMMAND=/usr/bin/python3 source  edk2/edksetup.sh
 
 if [ "x$SECURE_BOOT" != "x" ]; then
 build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log -D SECURE_BOOT
