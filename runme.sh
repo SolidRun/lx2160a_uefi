@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# DDR_SPEED=2400,2600,2900,3200
+# DDR_SPEED=2400,2600,2900,3000,3200
 # SERDES=8_5_2, 13_5_2, 20_5_2
 
 ###############################################################################
@@ -20,7 +20,7 @@ if [ "x$DDR_SPEED" == "x" ]; then
 	DDR_SPEED=2400
 fi
 if [ "x$SOC_SPEED" == "x" ]; then
-	SOC_SPEED=2200
+	SOC_SPEED=2000
 fi
 if [ "x$BUS_SPEED" == "x" ]; then
 	BUS_SPEED=700
@@ -32,14 +32,24 @@ if [ "x$UEFI_RELEASE" == "x" ]; then
 	UEFI_RELEASE=RELEASE
 fi
 if [ "x$BOOT_MODE" == "x" ]; then
-	BOOT_MODE=auto
+	BOOT_MODE=sd
 fi
+if [ "x$XMP_PROFILE" != "x" ]; then
+	XMP_PROFILE="XMP_PROFILE=${XMP_PROFILE}"
+fi
+if [ "x$X86EMU" != "x" ]; then
+	X86EMU="-D X64EMU_ENABLE=TRUE"
+fi
+if [ "x$AMDGOP" == "x" ]; then
+	AMDGOP="-D AARCH64_GOP_ENABLE=TRUE"
+fi
+
 mkdir -p images/tmp
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=${SOC_SPEED}_${BUS_SPEED}_${DDR_SPEED}
 
-TOOLS="wget tar git make dd envsubst"
+TOOLS="wget tar git make dd envsubst dtc iasl"
 
 HOST_ARCH=`arch`
 if [ "$HOST_ARCH" == "x86_64" ]; then 
@@ -142,14 +152,14 @@ export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-platforms:$WORKSPACE/edk2-n
 source  edk2/edksetup.sh
 
 if [ "x$SECURE_BOOT" != "x" ]; then
-build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log -D SECURE_BOOT
+build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build.log -D SECURE_BOOT ${X86EMU} ${AMDGOP} 
 export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
-build -p "edk2-platforms/Platform/SolidRun/StandAloneMm/StandaloneMm.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build-mm.log
+build -p "edk2-platforms/Platform/SolidRun/StandAloneMm/StandaloneMm.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build-mm.log ${X86EMU} ${AMDGOP}
 export CFG_STMM_PATH=$ROOTDIR/build/tianocore/Build/NXPMmStandalone/${UEFI_RELEASE}_GCC5/FV/BL32_AP_MM.fd
 
 echo "Build optee_os"
 cd $ROOTDIR/build/optee_os
-make -j${PARALLEL} CFG_ARM64_core=y PLATFORM=ls-lx2160ardb CFG_SCTLR_ALIGNMENT_CHECK=n CFG_TEE_TA_LOG_LEVEL=0
+make -j${PARALLEL} CFG_ARM64_core=y PLATFORM=ls-lx2160ardb CFG_SCTLR_ALIGNMENT_CHECK=n CFG_TEE_TA_LOG_LEVEL=0 CFG_WITH_STMM_SP=y
 ${CROSS_COMPILE}objcopy -v -O binary out/arm-plat-ls/core/tee.elf out/arm-plat-ls/core/tee.bin 
 export BL32=$ROOTDIR/build/optee_os/out/arm-plat-ls/core/tee.bin
 else
@@ -160,16 +170,14 @@ fi
 
 export ARCH=arm64 # While building UEFI ARCH is unset
 
-echo "Building arm-trusted-firmware"
+echo "Building trusted-firmware-a"
 cd $ROOTDIR/build/arm-trusted-firmware/
 
 if [ "x$SECURE_BOOT" != "x" ]; then
-make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin BOOT_MODE=${BOOT_MODE} SPD=opteed
+make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin BOOT_MODE=${BOOT_MODE} SPD=opteed ${XMP_PROFILE}
 else
-make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${BOOT_MODE} SECURE_BOOT=false
+make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${BOOT_MODE} SECURE_BOOT=false ${XMP_PROFILE}
 fi
-
-#make -j${PARALLEL} PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=auto SECURE_BOOT=false DEBUG=1 LOG_LEVEL=50 DDR_DEBUG=yes DDR_PHY_DEBUG=yes SD_DEBUG=1
 
 cd $ROOTDIR/
 if [ "x$SECURE_BOOT" != "x" ]; then
@@ -180,13 +188,10 @@ fi
 truncate -s 8M $ROOTDIR/images/${IMG}
 
 # RCW+PBI+BL2 at block 8
-if [ "x$BOOT_MODE" == "flexspi_nor" ]; then
+if [ "x$BOOT_MODE" == "xflexspi_nor" ]; then
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_flexspi_nor.pbl of=images/${IMG} bs=512 conv=notrunc
-elif [ "x$BOOT_MODE" == "sd" ]; then
+elif [ "x$BOOT_MODE" == "xsd" ]; then
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_sd.pbl of=images/${IMG} bs=512 seek=8 conv=sparse
-else
-dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 conv=notrunc
-dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_auto.pbl of=images/${IMG} bs=512 seek=8 conv=sparse
 fi
 
 # DDR PHY FIP at 0x100
