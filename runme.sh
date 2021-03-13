@@ -163,7 +163,7 @@ make -j${PARALLEL} CFG_ARM64_core=y PLATFORM=ls-lx2160ardb CFG_SCTLR_ALIGNMENT_C
 ${CROSS_COMPILE}objcopy -v -O binary out/arm-plat-ls/core/tee.elf out/arm-plat-ls/core/tee.bin 
 export BL32=$ROOTDIR/build/optee_os/out/arm-plat-ls/core/tee.bin
 else
-build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b $UEFI_RELEASE -y build.log -D SOURCE_DEBUG_ENABLE
+build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build.log ${X86EMU} ${AMDGOP}
 export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
 
 fi
