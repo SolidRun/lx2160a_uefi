@@ -95,7 +95,11 @@ for i in $TOOLS; do
 done
 set -e
 
-if [[ ! -d $ROOTDIR/build/toolchain/${LINARO_GCC_VERSION} ]]; then
+if [[ ! -d $ROOTDIR/images ]]; then
+	mkdir $ROOTDIR/images
+fi
+
+if [[ ! -d $ROOTDIR/build/toolchain/${LINARO_GCC_VERSION} && "$HOST_ARCH" == "x86_64" ]]; then
 	mkdir -p $ROOTDIR/build/toolchain
 	cd $ROOTDIR/build/toolchain
 	wget https://releases.linaro.org/components/toolchain/binaries/${LINARO_GCC_SV}/aarch64-linux-gnu/${LINARO_GCC_VERSION}.tar.xz
