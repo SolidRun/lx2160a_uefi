@@ -4,6 +4,11 @@ set -e
 # DDR_SPEED=2400,2600,2900,3000,3200
 # SERDES=8_5_2, 13_5_2, 20_5_2
 
+LINARO_GCC_VERSION="gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu"
+IFS='-' read SP1 SP2 SP3 SP4 SP5 <<< ${LINARO_GCC_VERSION}
+LINARO_GCC_SV="${SP3::-2}-${SP4}"
+GIT_HASH=`git rev-parse --short HEAD`
+
 ###############################################################################
 # General configurations
 ###############################################################################
@@ -44,7 +49,6 @@ if [ "x$AMDGOP" == "x" ]; then
 	AMDGOP="-D AARCH64_GOP_ENABLE=TRUE"
 fi
 
-mkdir -p images/tmp
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=${SOC_SPEED}_${BUS_SPEED}_${DDR_SPEED}
@@ -53,8 +57,8 @@ TOOLS="wget tar git make dd envsubst dtc iasl"
 
 HOST_ARCH=`arch`
 if [ "$HOST_ARCH" == "x86_64" ]; then 
-export CROSS_COMPILE=$ROOTDIR/build/toolchain/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
-export CROSS_COMPILE64=$ROOTDIR/build/toolchain/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=$ROOTDIR/build/toolchain/${LINARO_GCC_VERSION}/bin/aarch64-linux-gnu-
+export CROSS_COMPILE64=$ROOTDIR/build/toolchain/${LINARO_GCC_VERSION}/bin/aarch64-linux-gnu-
 fi
 export ARCH=arm64
 
@@ -91,12 +95,12 @@ for i in $TOOLS; do
 done
 set -e
 
-if [[ ! -d $ROOTDIR/build/toolchain ]]; then
+if [[ ! -d $ROOTDIR/build/toolchain/${LINARO_GCC_VERSION} ]]; then
 	mkdir -p $ROOTDIR/build/toolchain
 	cd $ROOTDIR/build/toolchain
-	wget https://releases.linaro.org/components/toolchain/binaries/7.5-2019.12/aarch64-linux-gnu/gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.tar.xz
-	tar -xvf gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.tar.xz
-	rm gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu.tar.xz
+	wget https://releases.linaro.org/components/toolchain/binaries/${LINARO_GCC_SV}/aarch64-linux-gnu/${LINARO_GCC_VERSION}.tar.xz
+	tar -xf ${LINARO_GCC_VERSION}.tar.xz --no-same-owner
+	rm -f ${LINARO_GCC_VERSION}.tar.xz
 fi
 
 echo "Building boot loader"
@@ -108,6 +112,17 @@ cd $ROOTDIR
 if [ "x$INITIALIZE" != "x" ]; then
 	git submodule update --init --recursive
 	exit
+fi
+
+###############################################################################
+# clean 
+###############################################################################
+if [ "xCLEAN" != "x" ]; then
+	rm -rf $ROOTDIR/build/arm-trusted-firmware/build
+	rm -rf $ROOTDIR/build/optee_os/out
+	rm -rf $ROOTDIR/tianocore/Build
+	rm -rf $ROOTDIR/tianocore/Build
+	make -C $ROOTDIR/build/tianocore/edk2/BaseTools
 fi
 
 ###############################################################################
@@ -173,6 +188,11 @@ export ARCH=arm64 # While building UEFI ARCH is unset
 echo "Building trusted-firmware-a"
 cd $ROOTDIR/build/arm-trusted-firmware/
 
+# TF-A is very picky about changing the boot mode and other settings
+# and it isn't very big so just remove the build directory regardless
+# and rebuild clean each time
+rm -rf build
+
 if [ "x$SECURE_BOOT" != "x" ]; then
 make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin BOOT_MODE=${BOOT_MODE} SPD=opteed ${XMP_PROFILE}
 else
@@ -181,9 +201,9 @@ fi
 
 cd $ROOTDIR/
 if [ "x$SECURE_BOOT" != "x" ]; then
-IMG=lx2160acex7_${SPEED}_${SERDES}_secure.img
+IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT_MODE}_secure_${GIT_HASH}.img
 else
-IMG=lx2160acex7_${SPEED}_${SERDES}.img
+IMG=lx2160acex7_${SPEED}_${SERDES}_${BOOT_MODE}_${GIT_HASH}.img
 fi
 truncate -s 8M $ROOTDIR/images/${IMG}
 
@@ -199,3 +219,5 @@ dd if=$ROOTDIR/build/ddr-phy-binary/lx2160a/fip_ddr.bin of=images/${IMG} bs=512 
 
 # FIP (BL31+BL32+BL33) at 0x800
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/fip.bin of=images/${IMG} bs=512 seek=2048 conv=notrunc
+
+echo -e "\r\n\r\nBuilt: images/${IMG}"
