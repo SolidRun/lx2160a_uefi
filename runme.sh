@@ -126,7 +126,7 @@ if [ "x$CLEAN" != "x" ]; then
 	rm -rf $ROOTDIR/build/optee_os/out
 	rm -rf $ROOTDIR/tianocore/Build
 	rm -rf $ROOTDIR/tianocore/Build
-	PYTHON_COMMAND=/usr/bin/python3 make -C $ROOTDIR/build/tianocore/edk2/BaseTools
+	PYTHON_COMMAND=/usr/bin/python3 make -C $ROOTDIR/build/tianocore/edk2/BaseTools clean
 fi
 
 ###############################################################################
