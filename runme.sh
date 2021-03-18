@@ -121,7 +121,7 @@ fi
 ###############################################################################
 # clean 
 ###############################################################################
-if [ "xCLEAN" != "x" ]; then
+if [ "x$CLEAN" != "x" ]; then
 	rm -rf $ROOTDIR/build/arm-trusted-firmware/build
 	rm -rf $ROOTDIR/build/optee_os/out
 	rm -rf $ROOTDIR/tianocore/Build
