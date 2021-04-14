@@ -114,7 +114,9 @@ cd $ROOTDIR
 # submodule init
 ###############################################################################
 if [ "x$INITIALIZE" != "x" ]; then
-	git submodule update --init --recursive
+	git submodule update --init
+	cd build/tianocore/edk2/ && git submodule update --init
+	cd $ROOTDIR
 	exit
 fi
 
