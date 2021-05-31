@@ -4,11 +4,9 @@ set -e
 # DDR_SPEED=2400,2600,2900,3000,3200
 # SERDES=8_5_2, 13_5_2, 20_5_2
 
-ARM_GCC_VERSION="gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu"
-IFS='-' read SP1 SP2 SP3 SP4 SP5 <<< ${ARM_GCC_VERSION}
-ARM_GCC_SV="${SP3}-${SP4}"
-ARM_GCC_DLREV="972019b5-912f-4ae6-864a-f61f570e2e7e"
-ARM_GCC_DLHASH="B8618949E6095C87E4C9FFA1648CAA67D4997D88"
+LINARO_GCC_VERSION="gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu"
+IFS='-' read SP1 SP2 SP3 SP4 SP5 <<< ${LINARO_GCC_VERSION}
+LINARO_GCC_SV="${SP3::-2}-${SP4}"
 GIT_HASH=`git rev-parse --short HEAD`
 
 ###############################################################################
@@ -59,8 +57,8 @@ TOOLS="wget tar git make dd envsubst dtc iasl"
 
 HOST_ARCH=`arch`
 if [ "$HOST_ARCH" == "x86_64" ]; then 
-export CROSS_COMPILE=$ROOTDIR/build/toolchain/${ARM_GCC_VERSION}/bin/aarch64-none-linux-gnu-
-export CROSS_COMPILE64=$ROOTDIR/build/toolchain/${ARM_GCC_VERSION}/bin/aarch64-none-linux-gnu-
+export CROSS_COMPILE=$ROOTDIR/build/toolchain/${LINARO_GCC_VERSION}/bin/aarch64-linux-gnu-
+export CROSS_COMPILE64=$ROOTDIR/build/toolchain/${LINARO_GCC_VERSION}/bin/aarch64-linux-gnu-
 fi
 export ARCH=arm64
 
@@ -104,9 +102,9 @@ fi
 if [[ ! -d $ROOTDIR/build/toolchain/${LINARO_GCC_VERSION} && "$HOST_ARCH" == "x86_64" ]]; then
 	mkdir -p $ROOTDIR/build/toolchain
 	cd $ROOTDIR/build/toolchain
-	wget "https://developer.arm.com/-/media/Files/downloads/gnu-a/${ARM_GCC_SV}/binrel/${ARM_GCC_VERSION}.tar.xz?revision=${ARM_GCC_DLREV}&la=en&hash=${ARM_GCC_DLHASH}" -O ${ARM_GCC_VERSION}.tar.xz
-	tar -xf ${ARM_GCC_VERSION}.tar.xz --no-same-owner
-	rm -f ${ARM_GCC_VERSION}.tar.xz
+	wget https://releases.linaro.org/components/toolchain/binaries/${LINARO_GCC_SV}/aarch64-linux-gnu/${LINARO_GCC_VERSION}.tar.xz
+	tar -xf ${LINARO_GCC_VERSION}.tar.xz --no-same-owner
+	rm -f ${LINARO_GCC_VERSION}.tar.xz
 fi
 
 echo "Building boot loader"
