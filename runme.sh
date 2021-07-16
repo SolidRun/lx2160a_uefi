@@ -4,9 +4,9 @@ set -e
 # DDR_SPEED=2400,2600,2900,3000,3200
 # SERDES=8_5_2, 13_5_2, 20_5_2
 
-LINARO_GCC_VERSION="gcc-linaro-7.5.0-2019.12-x86_64_aarch64-linux-gnu"
-IFS='-' read SP1 SP2 SP3 SP4 SP5 <<< ${LINARO_GCC_VERSION}
-LINARO_GCC_SV="${SP3::-2}-${SP4}"
+ARM_GCC_VERSION="gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu"
+IFS='-' read SP1 SP2 SP3 SP4 SP5 <<< ${ARM_GCC_VERSION}
+ARM_GCC_SV="${SP3}-${SP4}"
 GIT_HASH=`git rev-parse --short HEAD`
 
 ###############################################################################
@@ -49,6 +49,10 @@ if [ "x$AMDGOP" == "x" ]; then
 	AMDGOP="-D AARCH64_GOP_ENABLE=TRUE"
 fi
 
+if [ "x$BIFURCATE_PCIE" != "x" ]; then
+	BIFURPCI="-D BIFURCATE_PCIE=TRUE"
+fi
+
 ROOTDIR=`pwd`
 PARALLEL=$(getconf _NPROCESSORS_ONLN) # Amount of parallel jobs for the builds
 SPEED=${SOC_SPEED}_${BUS_SPEED}_${DDR_SPEED}
@@ -57,8 +61,8 @@ TOOLS="wget tar git make dd envsubst dtc iasl"
 
 HOST_ARCH=`arch`
 if [ "$HOST_ARCH" == "x86_64" ]; then 
-export CROSS_COMPILE=$ROOTDIR/build/toolchain/${LINARO_GCC_VERSION}/bin/aarch64-linux-gnu-
-export CROSS_COMPILE64=$ROOTDIR/build/toolchain/${LINARO_GCC_VERSION}/bin/aarch64-linux-gnu-
+export CROSS_COMPILE=$ROOTDIR/build/toolchain/${ARM_GCC_VERSION}/bin/aarch64-none-linux-gnu-
+export CROSS_COMPILE64=$ROOTDIR/build/toolchain/${ARM_GCC_VERSION}/bin/aarch64-none-linux-gnu-
 fi
 export ARCH=arm64
 
@@ -99,12 +103,12 @@ if [[ ! -d $ROOTDIR/images ]]; then
 	mkdir $ROOTDIR/images
 fi
 
-if [[ ! -d $ROOTDIR/build/toolchain/${LINARO_GCC_VERSION} && "$HOST_ARCH" == "x86_64" ]]; then
+if [[ ! -d $ROOTDIR/build/toolchain/${ARM_GCC_VERSION} && "$HOST_ARCH" == "x86_64" ]]; then
 	mkdir -p $ROOTDIR/build/toolchain
 	cd $ROOTDIR/build/toolchain
-	wget https://releases.linaro.org/components/toolchain/binaries/${LINARO_GCC_SV}/aarch64-linux-gnu/${LINARO_GCC_VERSION}.tar.xz
-	tar -xf ${LINARO_GCC_VERSION}.tar.xz --no-same-owner
-	rm -f ${LINARO_GCC_VERSION}.tar.xz
+	wget https://developer.arm.com/-/media/Files/downloads/gnu-a/${ARM_GCC_SV}/binrel/${ARM_GCC_VERSION}.tar.xz
+	tar -xf ${ARM_GCC_VERSION}.tar.xz --no-same-owner
+	rm -f ${ARM_GCC_VERSION}.tar.xz
 fi
 
 echo "Building boot loader"
@@ -148,6 +152,10 @@ else
 	export SPD1="1"
 fi
 
+if [ "x$BIFURCATE_PCIE" != "x" ]; then
+export SP3="3"
+fi
+
 envsubst < configs/lx2160a_serdes.def > configs/lx2160a_serdes.rcwi
 
 IFS=_ read CPU SYS MEM <<< $SPEED
@@ -173,20 +181,19 @@ export PACKAGES_PATH=$WORKSPACE/edk2:$WORKSPACE/edk2-platforms:$WORKSPACE/edk2-n
 source  edk2/edksetup.sh
 
 if [ "x$SECURE_BOOT" != "x" ]; then
-build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build.log -D SECURE_BOOT ${X86EMU} ${AMDGOP} 
+build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build.log -D SECURE_BOOT ${X86EMU} ${AMDGOP} ${BIFURPCI} 
 export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
-build -p "edk2-platforms/Platform/SolidRun/StandAloneMm/StandaloneMm.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build-mm.log ${X86EMU} ${AMDGOP}
+build -p "edk2-platforms/Platform/SolidRun/StandAloneMm/StandaloneMm.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build-mm.log
 export CFG_STMM_PATH=$ROOTDIR/build/tianocore/Build/NXPMmStandalone/${UEFI_RELEASE}_GCC5/FV/BL32_AP_MM.fd
 
 echo "Build optee_os"
 cd $ROOTDIR/build/optee_os
-make -j${PARALLEL} CFG_ARM64_core=y PLATFORM=ls-lx2160ardb CFG_SCTLR_ALIGNMENT_CHECK=n CFG_TEE_TA_LOG_LEVEL=0 CFG_WITH_STMM_SP=y
+make -j${PARALLEL} CFG_ARM64_core=y PLATFORM=ls-lx2160ardb CFG_SCTLR_ALIGNMENT_CHECK=n CFG_TEE_CORE_LOG_LEVEL=0 CFG_TEE_TA_LOG_LEVEL=0 CFG_WITH_STMM_SP=y
 ${CROSS_COMPILE}objcopy -v -O binary out/arm-plat-ls/core/tee.elf out/arm-plat-ls/core/tee.bin 
 export BL32=$ROOTDIR/build/optee_os/out/arm-plat-ls/core/tee.bin
 else
-build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build.log ${X86EMU} ${AMDGOP}
+build -p "edk2-platforms/Platform/SolidRun/LX2160aCex7/LX2160aCex7.dsc" -a AARCH64 -t GCC5 -b ${UEFI_RELEASE} -y build.log ${X86EMU} ${AMDGOP} ${BIFURPCI}
 export BL33=$ROOTDIR/build/tianocore/Build/LX2160aCex7/${UEFI_RELEASE}_GCC5/FV/LX2160ACEX7_EFI.fd
-
 fi
 
 export ARCH=arm64 # While building UEFI ARCH is unset
@@ -200,9 +207,9 @@ cd $ROOTDIR/build/arm-trusted-firmware/
 rm -rf build
 
 if [ "x$SECURE_BOOT" != "x" ]; then
-make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin BOOT_MODE=${BOOT_MODE} SPD=opteed ${XMP_PROFILE}
+make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin BOOT_MODE=${BOOT_MODE} SPD=opteed ${XMP_PROFILE} ENABLE_STACK_PROTECTION=1
 else
-make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${BOOT_MODE} SECURE_BOOT=false ${XMP_PROFILE}
+make PLAT=lx2160acex7 all fip pbl RCW=$ROOTDIR/build/rcw/lx2160acex7/rcws/rcw_lx2160acex7.bin TRUSTED_BOARD_BOOT=0 GENERATE_COT=0 BOOT_MODE=${BOOT_MODE} SECURE_BOOT=false SD_BOOT=true ${XMP_PROFILE} ENABLE_STACK_PROTECTION=1
 fi
 
 cd $ROOTDIR/
