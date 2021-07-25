@@ -1,0 +1,85 @@
+# lx2160a_uefi/.github/workflows/build.yml
+
+# This is a github actions workflow file.
+
+---
+
+name: Build lx2160a_uefi
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  workflow_dispatch:  # No inputs
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository with LFS and submodules
+      - uses: actions/checkout@v2
+        with:
+          lfs: 'true'
+          submodules: 'recursive'
+
+      - name: dump some diagnostics
+        run: |
+          set -euvx
+          date -uIseconds
+          uname -a
+          getent hosts
+          getent passwd
+          getent group
+          cat -n /proc/1/cgroup
+          export
+
+      - name: install build dependencies
+        run: |
+          set -euvx
+          sudo apt-get --yes update
+          xargs sudo apt-get --yes --no-install-recommends install <<'EOF'
+          acpica-tools
+          bc
+          ca-certificates
+          device-tree-compiler
+          g++
+          gcc
+          gettext-base
+          git
+          libc6-dev
+          libssl-dev
+          make
+          python3
+          python3-distutils
+          sudo
+          uuid-dev
+          wget
+          xz-utils
+          EOF
+          cmd_python="$(realpath "$(command -v python)")"
+          cmd_python3="$(realpath "$(command -v python3)")"
+          if ! [ "${cmd_python}" = "${cmd_python3}" ]; then
+              sudo update-alternatives \
+                  --verbose \
+                  --install \
+                  "${cmd_python}" \
+                  python \
+                  "${cmd_python3}" \
+                  1
+          fi
+
+      - name: build
+        run: |
+          set -euvx
+          INITIALIZE=1 ./runme.sh
+          ./runme.sh
+
+      - name: archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: images
+          path: |
+            images/*.img
