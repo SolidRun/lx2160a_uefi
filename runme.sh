@@ -4,7 +4,7 @@ set -e
 # DDR_SPEED=2400,2600,2900,3000,3200
 # SERDES=8_5_2, 13_5_2, 20_5_2
 
-ARM_GCC_VERSION="gcc-arm-9.2-2019.12-x86_64-aarch64-none-linux-gnu"
+ARM_GCC_VERSION="gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu"
 IFS='-' read SP1 SP2 SP3 SP4 SP5 <<< ${ARM_GCC_VERSION}
 ARM_GCC_SV="${SP3}-${SP4}"
 GIT_HASH=`git rev-parse --short HEAD`
