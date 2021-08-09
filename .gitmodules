@@ -25,4 +25,4 @@
 [submodule "build/tianocore/edk2-non-osi"]
 	path = build/tianocore/edk2-non-osi
 	url = https://github.com/SolidRun/edk2-non-osi.git
-	branch = stable202105-lx2160acex7
+	branch = edk2-stable202105-lx2160acex7
