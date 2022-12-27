@@ -225,6 +225,8 @@ if [ "x$BOOT_MODE" == "xflexspi_nor" ]; then
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_flexspi_nor.pbl of=images/${IMG} bs=512 conv=notrunc
 elif [ "x$BOOT_MODE" == "xsd" ]; then
 dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_sd.pbl of=images/${IMG} bs=512 seek=8 conv=sparse
+elif [ "x$BOOT_MODE" == "xemmc" ]; then
+dd if=$ROOTDIR/build/arm-trusted-firmware/build/lx2160acex7/release/bl2_emmc.pbl of=images/${IMG} bs=512 seek=8 conv=sparse
 fi
 
 # DDR PHY FIP at 0x100
