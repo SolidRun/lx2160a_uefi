@@ -1,3 +1,11 @@
+# PROJECT DISCONTINUED
+
+**This EDK-2/ACPI UEFI firmware project is no longer maintained.**
+
+The project has been discontinued due to friction in the ACPI standardization process. Modern U-Boot now ships with the required facilities for booting a generic Linux distribution designed for UEFI (using Device-Tree).
+
+For instructions on installing Ubuntu and other UEFI-compatible operating systems on the LX2160A using modern U-Boot, please refer to the [Official SolidRun LX2160A Software Page](https://dev.solid-run.com/nxp/lx2160a/sbc-platform/lx2160a-software).
+
 # SolidRun's LX2160A COM express type 7 UEFI build
 
 ## Build with host tools
